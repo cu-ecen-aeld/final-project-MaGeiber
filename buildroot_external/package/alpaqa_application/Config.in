@@ -1,0 +1,5 @@
+
+config BR2_PACKAGE_ALPAQA_APPLICATION
+	bool "alpaqa_application"
+	help
+	  Includes the alpaqa executable.

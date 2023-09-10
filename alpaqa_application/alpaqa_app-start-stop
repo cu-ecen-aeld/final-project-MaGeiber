@@ -1,0 +1,17 @@
+#! /bin/sh
+
+case "$1" in
+    start)
+        echo "Starting Alpaqa"
+        /usr/bin/alpaqa_app
+        ;;
+    stop)
+        echo "Stopping Alpaqa"
+        killall -q alpaqa_app
+        ;;
+    *)
+        echo "Usage: $0 {start|stop}"
+    exit 1
+esac
+
+exit 0
