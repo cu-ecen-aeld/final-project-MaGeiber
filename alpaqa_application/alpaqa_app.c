@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -6,20 +7,27 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "PMSA003I.h"
+#include "SHT41.h"
+
 #define ESCAPE_CLEAR_SCREEN "\e[2J"
 #define ESCAPE_CURSOR_PREVIOUS "\e[7F"
 #define ESCAPE_CLEAR_LINE "\e[2K"
 
 #define ALPAQA_LOG_FILE "/var/log/alpaqa/alpaqa_log.txt"
+#define I2C_DEVICE_FILENAME "/dev/i2c-1"
 
 bool alpaqaRunning;
 
-static void signal_handler(int signal_number);
+static void signalHandler(int signalNumber);
 
 int main()
 {
     FILE * logFile;
-    struct sigaction sig_action;
+    struct sigaction sigAction;
+    int i2cFile;
+    AQI_DATA aqiData;
+    TEMP_HUMIDITY_DATA tempHumidityData;
 
     alpaqaRunning = true;
 
@@ -29,12 +37,12 @@ int main()
     printf("========================\n");
 
     // register the signal handler to allow graceful quitting
-    memset(&sig_action, 0, sizeof(struct sigaction));
-    sig_action.sa_handler = signal_handler;
-    if( sigaction(SIGTERM, &sig_action, NULL) != 0)
+    memset(&sigAction, 0, sizeof(struct sigaction));
+    sigAction.sa_handler = signalHandler;
+    if( sigaction(SIGTERM, &sigAction, NULL) != 0)
     {
     }
-    if( sigaction(SIGINT, &sig_action, NULL) != 0)
+    if( sigaction(SIGINT, &sigAction, NULL) != 0)
     {
     }
 
@@ -44,14 +52,35 @@ int main()
         printf("Failed to open log file: %s ! errno: %d\n", ALPAQA_LOG_FILE, errno);
     }
 
+    // Attempt to open i2c device
+    if( (i2cFile = open(I2C_DEVICE_FILENAME, O_RDWR)) < 0)
+    {
+        printf("Failed to open the I2C Bus! errno: %d\n", errno);
+    }
+
     while(alpaqaRunning)
     {
+        // Read data from AQI sensor
+        if(readAqiDataFromDevice(i2cFile) == true)
+        {
+            getAqiData(&aqiData);
+        }
+
+        // Read data from Temperature and Humidity sensor
+        if(readTempAndHumidityFromDevice(i2cFile) == true)
+        {
+            getTempAndHumidityData(&tempHumidityData);
+        }
+
         printf("Air Quality: Particulate Matter:\n");
-        printf("PM 1.0: %d PM 2.5: %d PM 10.0: %d\n", 0, 0, 0);
+        printf(ESCAPE_CLEAR_LINE);
+        printf("PM 1.0: %d PM 2.5: %d PM 10.0: %d\n", aqiData.pm1_0, aqiData.pm2_5, aqiData.pm10_0);
         printf("Calculated AQI (Extrapolated): %d\n", 0);
         printf("Calculated AQI (24 hour): %d\n", 0);
-        printf("Temperature: %d F / %d C\n", 0, 0);
-        printf("Humidity: %d\n", 0);
+        printf(ESCAPE_CLEAR_LINE);
+        printf("Temperature: %0.2f F / %d C\n", tempHumidityData.temperature, 0);
+        printf(ESCAPE_CLEAR_LINE);
+        printf("Humidity: %0.2f\n", tempHumidityData.humidity);
         printf("Heat Index: %d\n", 0);
         printf(ESCAPE_CURSOR_PREVIOUS);
         sleep(1);
@@ -69,10 +98,10 @@ int main()
     return 0;
 }
 
-static void signal_handler(int signal_number)
+static void signalHandler(int signalNumber)
 {
-    int errno_saved = errno;
-    switch(signal_number)
+    int errnoSaved = errno;
+    switch(signalNumber)
     {
         case SIGINT:
         case SIGTERM:
@@ -82,5 +111,5 @@ static void signal_handler(int signal_number)
         default:
             break;
     }
-    errno = errno_saved;
+    errno = errnoSaved;
 }
