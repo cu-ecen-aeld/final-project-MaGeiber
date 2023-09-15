@@ -9,6 +9,7 @@
 
 #include "PMSA003I.h"
 #include "SHT41.h"
+#include "alpaqaCalc.h"
 
 #define ESCAPE_CLEAR_SCREEN "\e[2J"
 #define ESCAPE_CURSOR_PREVIOUS "\e[7F"
@@ -26,8 +27,12 @@ int main()
     FILE * logFile;
     struct sigaction sigAction;
     int i2cFile;
-    AQI_DATA aqiData;
+    PARTICULATE_MATTER_DATA particulateData;
     TEMP_HUMIDITY_DATA tempHumidityData;
+    float heatIndex;
+    uint16_t calculatedAqi;
+    uint16_t instantAqi;
+    bool aqiFull24Hour;
 
     alpaqaRunning = true;
 
@@ -58,30 +63,49 @@ int main()
         printf("Failed to open the I2C Bus! errno: %d\n", errno);
     }
 
+    initAlpaqaCalc();
+
     while(alpaqaRunning)
     {
         // Read data from AQI sensor
         if(readAqiDataFromDevice(i2cFile) == true)
         {
-            getAqiData(&aqiData);
+            getParticulateMatterData(&particulateData);
+            storeAqiData(&particulateData);
+            aqiFull24Hour = calcAQI(&calculatedAqi);
+            instantAqi = calcInstantAQI(&particulateData);
         }
 
         // Read data from Temperature and Humidity sensor
         if(readTempAndHumidityFromDevice(i2cFile) == true)
         {
             getTempAndHumidityData(&tempHumidityData);
+            heatIndex = calcHeatIndex(&tempHumidityData);
         }
 
         printf("Air Quality: Particulate Matter:\n");
         printf(ESCAPE_CLEAR_LINE);
-        printf("PM 1.0: %d PM 2.5: %d PM 10.0: %d\n", aqiData.pm1_0, aqiData.pm2_5, aqiData.pm10_0);
-        printf("Calculated AQI (Extrapolated): %d\n", 0);
-        printf("Calculated AQI (24 hour): %d\n", 0);
+        printf("PM 1.0: %d PM 2.5: %d PM 10.0: %d\n", particulateData.pm1_0, particulateData.pm2_5, particulateData.pm10_0);
+
         printf(ESCAPE_CLEAR_LINE);
-        printf("Temperature: %0.2f F / %d C\n", tempHumidityData.temperature, 0);
+        printf("AQI now: %d\n", instantAqi);
+
+        printf(ESCAPE_CLEAR_LINE);
+        if(aqiFull24Hour)
+        {
+            printf("Calculated AQI (24 hour): %d\n", calculatedAqi);
+        }
+        else
+        {
+            printf("Calculated AQI (Running Average): %d\n", calculatedAqi);
+        }
+        
+        printf(ESCAPE_CLEAR_LINE);
+        printf("Temperature: %0.2f F / %0.2f C\n", tempHumidityData.temperatureF, tempHumidityData.temperatureC);
         printf(ESCAPE_CLEAR_LINE);
         printf("Humidity: %0.2f\n", tempHumidityData.humidity);
-        printf("Heat Index: %d\n", 0);
+        printf(ESCAPE_CLEAR_LINE);
+        printf("Heat Index: %0.2f", heatIndex);
         printf(ESCAPE_CURSOR_PREVIOUS);
         sleep(1);
     }

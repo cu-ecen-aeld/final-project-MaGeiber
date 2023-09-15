@@ -21,7 +21,7 @@ bool readAqiDataFromDevice(int i2cFile)
 }
 
 // Units are micro grams / meters^3
-bool getAqiData(AQI_DATA *data)
+bool getParticulateMatterData(PARTICULATE_MATTER_DATA *data)
 {
     // Currently only want environmental PM for 1.0, 2.5, and 10
     // So, bytes 10/11, 12/13, and 14/15 respectively

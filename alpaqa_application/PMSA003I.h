@@ -16,9 +16,9 @@ typedef struct
     uint16_t pm1_0;
     uint16_t pm2_5;
     uint16_t pm10_0;
-} AQI_DATA;
+} PARTICULATE_MATTER_DATA;
 
 bool readAqiDataFromDevice(int i2cFile);
-bool getAqiData(AQI_DATA * data);
+bool getParticulateMatterData(PARTICULATE_MATTER_DATA * data);
 
 #endif

@@ -17,7 +17,8 @@
 
 typedef struct 
 {
-    float temperature;
+    float temperatureF;
+    float temperatureC;
     float humidity;
 } TEMP_HUMIDITY_DATA;
 

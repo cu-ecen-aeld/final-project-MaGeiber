@@ -1,8 +1,9 @@
 CC?=$(CROSS_COMPILE)gcc
 CFLAGS?=-I.
 TARGET?=alpaqa_app
-#LDFLAGS?=-pthread -lrt
-OBJS?=$(TARGET).o PMSA003I.o SHT41.o
+# -lm for math library
+LDFLAGS?=-lm
+OBJS?=$(TARGET).o PMSA003I.o SHT41.o alpaqaCalc.o
 INCLUDES?=*.h
 
 default all: $(OBJS)

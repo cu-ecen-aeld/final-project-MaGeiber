@@ -43,8 +43,11 @@ bool getTempAndHumidityData(TEMP_HUMIDITY_DATA *data)
     // Raw temperature data is bytes 0 and 1, byte 2 is checksum (ignored for now)
     rawTemperature = (rawData[0] * 256) + rawData[1];
 
-    // Conversion to degrees f from datasheet: -49 + 315*(rawTemperature / 65535)
-    data->temperature = -49 + (315 * rawTemperature / 65535);
+    // Conversion to degrees F from datasheet: -49 + 315 * (rawTemperature / 65535)
+    data->temperatureF = -49 + (315 * rawTemperature / 65535);
+
+    // Conversion to degree C from datasheet: -45 + 175 * (rawTemperature / 65535)
+    data->temperatureC = -45 + (175 * rawTemperature / 65535);
 
     // Raw humidity data is bytes 3 and 4, byte 5 is checksum (ignored for now)
     rawHumidity = (rawData[3] * 256) + rawData[4];
