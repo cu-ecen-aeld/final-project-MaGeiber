@@ -12,7 +12,7 @@
 #include "alpaqaCalc.h"
 
 #define ESCAPE_CLEAR_SCREEN "\e[2J"
-#define ESCAPE_CURSOR_PREVIOUS "\e[7F"
+#define ESCAPE_CURSOR_PREVIOUS "\e[6F"
 #define ESCAPE_CLEAR_LINE "\e[2K"
 
 #define ALPAQA_LOG_FILE "/var/log/alpaqa/alpaqa_log.txt"

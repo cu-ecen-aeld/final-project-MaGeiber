@@ -160,7 +160,7 @@ uint16_t calculateAqiIndex(uint16_t pm2_5, uint16_t pm10_0)
                 breakpointMin = breakpoints_table[idx].breakpointPm2_5.breakpointMin;
                 breakpointMax = breakpoints_table[idx].breakpointPm2_5.breakpointMax;
                 aqiMin = breakpoints_table[idx].breakpoints_aqi.breakpointMin;
-                aqiMin = breakpoints_table[idx].breakpoints_aqi.breakpointMax;
+                aqiMax = breakpoints_table[idx].breakpoints_aqi.breakpointMax;
                 maxPm = pm2_5;
             }
         }
@@ -172,7 +172,7 @@ uint16_t calculateAqiIndex(uint16_t pm2_5, uint16_t pm10_0)
                 breakpointMin = breakpoints_table[idx].breakpoints_pm10_0.breakpointMin;
                 breakpointMax = breakpoints_table[idx].breakpoints_pm10_0.breakpointMax;
                 aqiMin = breakpoints_table[idx].breakpoints_aqi.breakpointMin;
-                aqiMin = breakpoints_table[idx].breakpoints_aqi.breakpointMax;
+                aqiMax = breakpoints_table[idx].breakpoints_aqi.breakpointMax;
                 maxPm = pm10_0;
             }
         }
@@ -184,5 +184,5 @@ uint16_t calculateAqiIndex(uint16_t pm2_5, uint16_t pm10_0)
 uint16_t calculatePollutantIndex(uint16_t pollutantConcentration, uint16_t breakpointHigh, uint16_t breakpointLow, uint16_t aqiHigh, uint16_t aqiLow)
 {
     // Equation 1 from the aqi technical assistance document
-    return (uint16_t)(((aqiHigh-aqiLow)/(breakpointHigh-breakpointLow)) * (pollutantConcentration - breakpointLow) + aqiLow);
+    return (uint16_t)(((float)(aqiHigh-aqiLow)/(breakpointHigh-breakpointLow)) * (float)(pollutantConcentration - breakpointLow) + aqiLow);
 }
