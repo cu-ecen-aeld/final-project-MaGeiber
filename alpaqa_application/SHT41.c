@@ -9,7 +9,7 @@ bool readTempAndHumidityFromDevice(int i2cFile)
     if(ioctl(i2cFile, I2C_SLAVE, SHT41_ADDR) < 0)
     {
         // Failed to acquire bus access or communicate with device
-        printf("Failed to acquire bus or communicate with SHT41\n");
+        //printf("Failed to acquire bus or communicate with SHT41\n");
         return false;
     }
 
@@ -17,7 +17,7 @@ bool readTempAndHumidityFromDevice(int i2cFile)
     writeCmd[0] = SHT41_HIGH_PRECISION;
     if(write(i2cFile, writeCmd, 1) != 1)
     {
-        printf("Failed to write desired precision to SHT41");
+        //printf("Failed to write desired precision to SHT41");
         return false;
     }
 
@@ -29,7 +29,7 @@ bool readTempAndHumidityFromDevice(int i2cFile)
     if(read(i2cFile, rawData, SHT41_READ_BYTES) != SHT41_READ_BYTES)
     {
         // Failed to read
-        printf("Failed to read data from SHT41\n");
+        //printf("Failed to read data from SHT41\n");
         return false;
     }
     return true;

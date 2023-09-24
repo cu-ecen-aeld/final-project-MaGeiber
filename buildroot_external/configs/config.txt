@@ -34,3 +34,9 @@ arm_64bit=1
 
 # enable i2c
 dtparam=i2c_arm=on
+
+# rotate screen to use vertically
+display_rotate=1
+
+# disable the rainbow splash screen
+disable_splash=1

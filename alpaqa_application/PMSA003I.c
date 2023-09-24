@@ -7,20 +7,22 @@ bool readAqiDataFromDevice(int i2cFile)
     if(ioctl(i2cFile, I2C_SLAVE, PMSA003I_ADDR) < 0)
     {
         // Failed to acquire bus access or communicate with device
-        printf("Failed to acquire bus or communicate with PMSA003I\n");
+        //printf("Failed to acquire bus or communicate with PMSA003I\n");
         return false;
     }
 
     if(read(i2cFile, rawData, PMSA003I_READ_BYTES) != PMSA003I_READ_BYTES)
     {
         // Failed to read
-        printf("Failed to read data from PMSA003I\n");
+        //printf("Failed to read data from PMSA003I\n");
         return false;
     }
     return true;
 }
 
 // Units are micro grams / meters^3
+// Note: Values are overlapped. PM10 contains0-10ug, PM2.5 contains 0-2.5, PM1.0 contains 0-1ug.
+// AQI calculation uses the highest concentration pollutant, so always PM10.
 bool getParticulateMatterData(PARTICULATE_MATTER_DATA *data)
 {
     // Currently only want environmental PM for 1.0, 2.5, and 10
