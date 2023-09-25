@@ -13,6 +13,8 @@
 
 #define ESCAPE_CLEAR_SCREEN "\e[2J"
 #define ESCAPE_CURSOR_PREVIOUS "\e[6F"
+#define BOLD "\e[1m"
+#define DEFAULT "\e[0m"
 
 #define BANNER_SIZE 3
 #define SECTION_SPACING 2
@@ -27,14 +29,20 @@
 #define SHT_DATA_START_LINE (SHT_BANNER_LINE + BANNER_SIZE)
 
 #define SYS_INFO_LOG_LINE (SYS_INFO_BANNER_LINE + BANNER_SIZE)
-#define SYS_INFO_I2C_LINE (SYS_INFO_LOG_LINE + 1)
+#define SYS_INFO_LOG_SIZE_LINE (SYS_INFO_LOG_LINE + 1)
+#define SYS_INFO_I2C_LINE (SYS_INFO_LOG_SIZE_LINE + 1)
 #define SYS_INFO_PM_LINE (SYS_INFO_I2C_LINE + 1)
 #define SYS_INFO_TEMPERATURE_LINE (SYS_INFO_PM_LINE + 1)
 
 #define BLACK_BG 40
 #define RED_FG 31
+#define RED_BG 41
 #define GREEN_FG 32
 #define CYAN_FG 36
+#define CYAN_BG 46
+#define WHITE_FG 37
+
+#define BUFFER_SIZE 256
 
 #define ALPAQA_LOG_FILE "/var/log/alpaqa/alpaqa_log.txt"
 #define I2C_DEVICE_FILENAME "/dev/i2c-1"
@@ -43,11 +51,14 @@ bool alpaqaRunning;
 
 static void signalHandler(int signalNumber);
 static void writeBanners();
+static void writePM(const PARTICULATE_MATTER_DATA * pm_data, uint16_t calculatedAqi, uint16_t instantAqi, bool aqiFull24Hour);
+static void writeTempHumidity(const TEMP_HUMIDITY_DATA * tempHumidityData, float heatIndex);
 
 #define cursorPosition(xLoc, yLoc) printf("\e[%d;%dH", xLoc, yLoc);
 #define clearLine() printf("\e[2K");
 #define setColor(foreground, background) printf("\e[%d;%dm", foreground, background);
 #define resetColor() printf("\e[0m");
+#define setBold() printf("\e[1m");
 
 int main()
 {
@@ -60,6 +71,7 @@ int main()
     uint16_t calculatedAqi;
     uint16_t instantAqi;
     bool aqiFull24Hour;
+    char fileBuffer[BUFFER_SIZE];
 
     alpaqaRunning = true;
 
@@ -132,30 +144,38 @@ int main()
             printf("Temperature and Humidity Sensor Status: Disconnected");
         }
 
-        cursorPosition(PM_DATA_START_LINE,1);
-        clearLine();
-        printf("PM 1.0: %d PM 2.5: %d PM 10.0: %d\n", particulateData.pm1_0, particulateData.pm2_5, particulateData.pm10_0);
-
-        clearLine();
-        printf("AQI now: %d\n", instantAqi);
-
-        clearLine();
-        if(aqiFull24Hour)
-        {
-            printf("Calculated AQI (24 hour): %d\n", calculatedAqi);
-        }
-        else
-        {
-            printf("Calculated AQI (Running Average): %d\n", calculatedAqi);
-        }
+        writePM(&particulateData, calculatedAqi, instantAqi, aqiFull24Hour);
         
-        cursorPosition(SHT_DATA_START_LINE,1);
-        clearLine();
-        printf("Temperature: %0.2f F / %0.2f C\n", tempHumidityData.temperatureF, tempHumidityData.temperatureC);
-        clearLine();
-        printf("Humidity: %0.2f\n", tempHumidityData.humidity);
-        clearLine();
-        printf("Heat Index: %0.2f", heatIndex);
+        writeTempHumidity(&tempHumidityData, heatIndex);
+
+        if(logFile != NULL)
+        {
+            size_t bufferStringSize;
+            long fileSize;
+
+            memset(fileBuffer, 0, sizeof(fileBuffer));
+
+            // PM 1.0, PM 2.5, PM 10.0, AQI, AQI avg, Temp F, Temp C, Humidity, Heat Index
+            snprintf(fileBuffer, sizeof(fileBuffer), "%d, %d, %d, %d, %d, %0.2f, %0.2f, %0.2f, %0.2f\n",
+                    particulateData.pm1_0, particulateData.pm2_5, particulateData.pm10_0,
+                    instantAqi, calculatedAqi,
+                    tempHumidityData.temperatureF, tempHumidityData.temperatureC,
+                    tempHumidityData.humidity,
+                    heatIndex);
+
+            bufferStringSize = strlen(fileBuffer);
+
+            fwrite(fileBuffer, bufferStringSize, sizeof(char), logFile);
+            fflush(logFile);
+
+            cursorPosition(SYS_INFO_LOG_SIZE_LINE,1);
+            clearLine();
+
+            fileSize = ftell(logFile);
+
+            printf("Log File Size: %lu bytes\n", fileSize);
+        }
+
         fflush(stdout);
         sleep(1);
     }
@@ -214,4 +234,87 @@ static void writeBanners()
     printf("============================================================\n");
     printf("=====================System Information=====================\n");
     printf("============================================================\n");
+}
+
+static void writePM(const PARTICULATE_MATTER_DATA * pm_data, uint16_t calculatedAqi, uint16_t instantAqi, bool aqiFull24Hour)
+{
+    cursorPosition(PM_DATA_START_LINE,1);
+    clearLine();
+    setBold();
+
+    printf("PM 1.0: ");
+    setColor(WHITE_FG, CYAN_BG);
+    printf("%d", pm_data->pm1_0);
+
+    setColor(WHITE_FG, BLACK_BG);
+    printf(" PM 2.5: ");
+    setColor(WHITE_FG, CYAN_BG);
+    printf("%d", pm_data->pm2_5);
+
+    setColor(WHITE_FG, BLACK_BG);
+    printf(" PM 10.0: ");
+    setColor(WHITE_FG, CYAN_BG);
+    printf("%d", pm_data->pm10_0);
+    setColor(WHITE_FG, BLACK_BG);
+    printf("\n");
+
+    clearLine();
+    setColor(WHITE_FG, BLACK_BG);
+    printf("AQI now: ");
+    setColor(WHITE_FG, CYAN_BG);
+    printf("%d", instantAqi);
+    setColor(WHITE_FG, BLACK_BG);
+    printf("\n");
+
+    clearLine();
+    setColor(WHITE_FG, BLACK_BG);
+    if(aqiFull24Hour)
+    {
+        printf("Calculated AQI (24 hour): ");
+    }
+    else
+    {
+        printf("Calculated AQI (Running Average): ");
+    }
+    setColor(WHITE_FG, CYAN_BG);
+    printf("%d", calculatedAqi);
+    setColor(WHITE_FG, BLACK_BG);
+    printf("\n");
+
+    resetColor();
+}
+
+static void writeTempHumidity(const TEMP_HUMIDITY_DATA * tempHumidityData, float heatIndex)
+{
+    cursorPosition(SHT_DATA_START_LINE,1);
+    clearLine();
+    setBold();
+
+    printf("Temperature: ");
+    setColor(WHITE_FG, RED_BG);
+    printf("%0.2f F", tempHumidityData->temperatureF);
+    setColor(WHITE_FG, BLACK_BG);
+    printf(" / ");
+    setColor(WHITE_FG, RED_BG);
+    printf("%0.2f C", tempHumidityData->temperatureC);
+    setColor(WHITE_FG, BLACK_BG);
+    printf("\n");
+
+    clearLine();
+    setColor(WHITE_FG, BLACK_BG);
+    printf("Humidity: ");
+    setColor(WHITE_FG, RED_BG);
+    printf("%0.2f", tempHumidityData->humidity);
+    setColor(WHITE_FG, BLACK_BG);
+    printf("\n");
+
+    clearLine();
+    setColor(WHITE_FG, BLACK_BG);
+    printf("Heat Index: ");
+    setColor(WHITE_FG, RED_BG);
+    printf("%0.2f", heatIndex);
+    setColor(WHITE_FG, BLACK_BG);
+    printf("\n");
+
+    resetColor();
 }
